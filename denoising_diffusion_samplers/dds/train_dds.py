@@ -426,7 +426,7 @@ def train_dds(
                                                       subkeys, batch_size_)
 
     #Training loss
-    if epoch % 10 == 0:
+    if epoch % 100000 == 0:
         update_detached_params(trainable_params, non_trainable_params,
                                "simple_drift_net", "stl_detach")
         params = hk.data_structures.merge(trainable_params, non_trainable_params)
@@ -446,14 +446,14 @@ def train_dds(
             accumulated_validation_loss.append(b_val)
             if b_val <= min(accumulated_validation_loss):
                 best_weights = w_val
-            utility_func.save_array_to_pickle(accumulated_validation_loss, "div_files/validation_loss.pickle")
+            utility_func.save_array_to_pickle(accumulated_validation_loss, "notebooks/div_files/validation_loss.pickle")
             utility_func.plot_training_and_validation_losses(accumulated_training_loss, accumulated_validation_loss)
 
         else:
             utility_func.plot_training_loss(accumulated_training_loss)
 
 
-        utility_func.save_array_to_pickle(accumulated_training_loss, "div_files/training_loss.pickle")
+        utility_func.save_array_to_pickle(accumulated_training_loss, "notebooks/div_files/training_loss.pickle")
 
 
 

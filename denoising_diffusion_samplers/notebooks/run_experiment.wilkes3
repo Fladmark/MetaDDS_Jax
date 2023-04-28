@@ -12,7 +12,7 @@
 #! Name of the job:
 #SBATCH -J gpujob
 #! Which project should be charged (NB Wilkes2 projects end in '-GPU'):
-#SBATCH -A OZTIRELI-SL3-GPU
+#SBATCH -A COMPUTERLAB-SL2-GPU
 #! How many whole nodes should be allocated?
 #SBATCH --nodes=1
 #! How many (MPI) tasks will there be in total?
@@ -73,7 +73,7 @@ np=$[${numnodes}*${mpi_tasks_per_node}]
 
 #! Choose this for a pure shared-memory OpenMP parallel program on a single node:
 #! (OMP_NUM_THREADS threads will be created):
-CMD="python /path/to/your/python.py"
+CMD="python /home/ef454/rds/hpc-work/MetaDDS_Jax/denoising_diffusion_samplers/notebooks/hyperparameter_search.py"
 
 #! Choose this for a MPI code using OpenMPI:
 #CMD="mpirun -npernode $mpi_tasks_per_node -np $np $application $options"
@@ -85,7 +85,7 @@ CMD="python /path/to/your/python.py"
 cd $workdir
 echo -e "Changed directory to `pwd`.\n"
 
-source myproject_env/bin/activate
+source python3.10/bin/activate
 
 JOBID=$SLURM_JOB_ID
 

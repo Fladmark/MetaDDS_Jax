@@ -69,5 +69,5 @@ funnel_config.model.step_scheme_key
 # %%
 funnel_config.model.ts.shape
 # %%
-funnel_config.trainer.epochs = 20
+funnel_config.trainer.epochs = 50
 out_dict = train_dds(funnel_config)

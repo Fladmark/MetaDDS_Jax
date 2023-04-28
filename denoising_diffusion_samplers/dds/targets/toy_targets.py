@@ -14,7 +14,7 @@ import numpy as np
 
 
 def get_attr():
-  div = 0.5
+  div = 1
   e = 0 #0.000001
   other_dim = 0
   return div, e, other_dim

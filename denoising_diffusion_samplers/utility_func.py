@@ -16,13 +16,15 @@ def load_array_from_pickle(file_name):
 
 
 # Plot the training loss on a graph
-def plot_training_loss(loss_array):
+def plot_training_loss(loss_array, save_name=None):
     plt.plot(loss_array)
     plt.xlabel('Epochs')
     plt.ylabel('Training Loss')
     plt.title('Training Loss vs. Epochs')
     plt.grid()
     plt.show()
+    if save_name:
+        plt.savefig("notebooks/div_files/" + save_name + ".png")
 
 def plot_training_and_validation_losses(training_loss_array, validation_loss_array):
     plt.plot(training_loss_array, label='Training Loss')
