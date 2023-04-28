@@ -410,9 +410,7 @@ def train_dds(
   times = []
 
   # change based on task
-  from experimental.xor_t import xor_task
   import utility_func
-  task = xor_task()
 
   accumulated_training_loss = []
   accumulated_validation_loss = []
