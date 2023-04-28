@@ -38,7 +38,7 @@ def loss_fn(params, x, y_true):
 
 
 
-#
+
 # b = 1
 # for i in range(5000):
 #     key = jax.random.PRNGKey(i)
@@ -48,35 +48,34 @@ def loss_fn(params, x, y_true):
 #     if l < b:
 #         b = l
 # print(b)
-
-model = hk.transform(xor_model)
-params = model.init(rng, X_train)
-arr = []
-q = 1
-for i in range(10000):
-    key = jax.random.PRNGKey(i+10000)
-    a,b,c,d,e,f = (jax.random.normal(key, (1, 6)) * 1.075)[0]
-    new_params = {
-        'linear': {
-            'w': jnp.array([[a, b], [c, d]]),
-            'b': jnp.array([0, 0]),
-        },
-        'linear_1': {
-            'w': jnp.array([[e], [f]]),
-            'b': jnp.array([0]),
-        },
-    }
-    for param in params:
-        params[param] = new_params[param]
-
-    l = loss_fn(params, X_train, y_train)
-    arr.append(l)
-    if l < q:
-        q = l
-print(q)
-print(min(arr))
-
-exit()
+#
+# model = hk.transform(xor_model)
+# params = model.init(rng, X_train)
+# arr = []
+# q = 1
+# for i in range(10000):
+#     key = jax.random.PRNGKey(i+10000)
+#     a,b,c,d,e,f = (jax.random.normal(key, (1, 6)) * 1.075)[0]
+#     new_params = {
+#         'linear': {
+#             'w': jnp.array([[a, b], [c, d]]),
+#             'b': jnp.array([0, 0]),
+#         },
+#         'linear_1': {
+#             'w': jnp.array([[e], [f]]),
+#             'b': jnp.array([0]),
+#         },
+#     }
+#     for param in params:
+#         params[param] = new_params[param]
+#
+#     l = loss_fn(params, X_train, y_train)
+#     arr.append(l)
+#     if l < q:
+#         q = l
+# print(min(arr))
+#
+# exit()
 
 
 

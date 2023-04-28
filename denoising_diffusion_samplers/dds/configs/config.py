@@ -118,12 +118,14 @@ def get_config():
   config.model.alpha = 0.5
   config.model.m = 1.0
 
+  config.model.val = False
+
   config.trainer.learning_rate = 0.0001
 
   config.trainer.epochs = 2500
   config.trainer.log_every_n_epochs = 1
 
-  config.trainer.lr_sch_base_dec = 1.0  # 0.95 For funnel as per PIS repo
+  config.trainer.lr_sch_base_dec = 0.95 # For funnel as per PIS repo
   config.model.stop_grad = True
   config.trainer.notebook = False
   config.trainer.simple_gaus_mean = 6.0
@@ -181,66 +183,74 @@ def set_task(config, task="lr_sonar"):
     config.model.target = log_prob_funn
 
   elif task == "mlpw":
-    config.model.input_dim = 2
+    config.model.input_dim = 1
     config.model.elbo_batch_size = 2000
-    mlpw_target = toy_targets.mlpw
+    config.model.target_class = toy_targets.mlpw_target_class()
+    mlpw_target = config.model.target_class.mlpw
     config.trainer.lnpi = mlpw_target
     config.model.target = mlpw_target
 
   elif task == "carillo":
-    config.model.input_dim = 2
+    config.model.input_dim = 1
     config.model.elbo_batch_size = 2000
-    target = toy_targets.carillo
+    config.model.target_class = toy_targets.carillo_target_class()
+    target = config.model.target_class.carillo
     config.trainer.lnpi = target
     config.model.target = target
 
   elif task == "layeb01":
-    config.model.input_dim = 2
+    config.model.input_dim = 1
     config.model.elbo_batch_size = 2000
     layeb01_target = toy_targets.layeb01
     config.trainer.lnpi = layeb01_target
     config.model.target = layeb01_target
 
   elif task == "layeb10":
-    config.model.input_dim = 2
+    config.model.input_dim = 1
     config.model.elbo_batch_size = 2000
-    layeb01_target = toy_targets.layeb10
+    config.model.target_class = toy_targets.layeb10_target_class()
+    layeb01_target = config.model.target_class.layeb10
     config.trainer.lnpi = layeb01_target
     config.model.target = layeb01_target
 
   elif task == "xor":
-    config.model.input_dim = 7
+    config.model.input_dim = 6
     config.model.elbo_batch_size = 2000
-    target = toy_targets.xor
+    config.model.target_class = toy_targets.xor_target_class()
+    target = config.model.target_class.xor
     config.trainer.lnpi = target
     config.model.target = target
 
   elif task == "breastcancer":
-    config.model.input_dim = 65
+    config.model.input_dim = 64
     config.model.elbo_batch_size = 2000
+    config.model.val = True
     config.model.target_class = toy_targets.breast_target_class()
     target = config.model.target_class.breast
     config.trainer.lnpi = target
     config.model.target = target
 
   elif task == "michalewicz":
-    config.model.input_dim = 3
+    config.model.input_dim = 2
     config.model.elbo_batch_size = 2000
-    target = toy_targets.michalewicz
+    config.model.target_class = toy_targets.michalewicz_target_class()
+    target = config.model.target_class.michalewicz
     config.trainer.lnpi = target
     config.model.target = target
 
   elif task == "levy":
-    config.model.input_dim = 3
+    config.model.input_dim = 2
     config.model.elbo_batch_size = 2000
-    target = toy_targets.levy
+    config.model.target_class = toy_targets.levy_target_class()
+    target = config.model.target_class.levy
     config.trainer.lnpi = target
     config.model.target = target
 
   elif task == "booth":
-    config.model.input_dim = 3
+    config.model.input_dim = 2
     config.model.elbo_batch_size = 2000
-    target = toy_targets.booth
+    config.model.target_class = toy_targets.booth_target_class()
+    target = config.model.target_class.booth
     config.trainer.lnpi = target
     config.model.target = target
 

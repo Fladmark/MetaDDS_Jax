@@ -23,7 +23,7 @@ from jaxline import utils
 
 from dds.configs.config import set_task
 from dds.data_paths import results_path
-
+from utility_func import get_smallest_loss, get_smallest_validation_loss
 
 FLAGS = flags.FLAGS
 Writer = Any
@@ -251,9 +251,9 @@ def train_dds(
                                    transition_steps, base_dec)
   scale_lr = optax.scale_by_schedule(exp_lr)
   opt = optax.chain(clipper, scale_by_adam, scale_lr, optax.scale(-1))
-  opt = optax.adam(0.0005)
+  #opt = optax.adam(0.0005)
 
-  # opt = optax.adam(learning_rate=config.trainer.learning_rate)
+  opt = optax.adam(learning_rate=config.trainer.learning_rate)
   opt_state = jax.pmap(opt.init)(trainable_params)
 
   @functools.partial(
@@ -414,7 +414,9 @@ def train_dds(
   import utility_func
   task = xor_task()
 
-  accumulated_loss = []
+  accumulated_training_loss = []
+  accumulated_validation_loss = []
+  best_weights = None
   for epoch in range(start, config.trainer.epochs):
     #hcb.id_print(epoch)
     rng_key = next(seq)
@@ -425,7 +427,7 @@ def train_dds(
                                                       model_state, opt_state,
                                                       subkeys, batch_size_)
 
-    # Training loss
+    #Training loss
     if epoch % 10 == 0:
         update_detached_params(trainable_params, non_trainable_params,
                                "simple_drift_net", "stl_detach")
@@ -433,21 +435,30 @@ def train_dds(
         (augmented_trajectory, _), _ = forward_fn_wrap(params, model_state, jax.random.PRNGKey(1), 5000)
 
         # This code needs to be augmented for other training targets.
-        data_x = []
-        for sample in augmented_trajectory:
-            x = sample[-1][:7 - 1]
-            data_x.append(x)
-        b = 1
-        for weights in data_x:
-            # for weights, _ in best:
-            l = task.get_loss(weights)
-            # print(l)
-            if l < b:
-                b = l
-        print(b)
-        accumulated_loss.append(b)
-        utility_func.save_array_to_pickle(accumulated_loss, "div_files/training_loss.pickle")
-        utility_func.plot_training_loss(accumulated_loss)
+
+
+        b, w = get_smallest_loss(augmented_trajectory, config)
+        print(f"Best training loss: {b}")
+        accumulated_training_loss.append(b)
+
+        if config.model.val:
+            b_val, w_val = get_smallest_validation_loss(augmented_trajectory, config)
+
+            print(f"Best validation loss: {b_val}")
+            accumulated_validation_loss.append(b_val)
+            if b_val <= min(accumulated_validation_loss):
+                best_weights = w_val
+            utility_func.save_array_to_pickle(accumulated_validation_loss, "div_files/validation_loss.pickle")
+            utility_func.plot_training_and_validation_losses(accumulated_training_loss, accumulated_validation_loss)
+
+        else:
+            utility_func.plot_training_loss(accumulated_training_loss)
+
+
+        utility_func.save_array_to_pickle(accumulated_training_loss, "div_files/training_loss.pickle")
+
+
+
 
     if config.trainer.timer:
       def func():
@@ -477,6 +488,10 @@ def train_dds(
 
       lr = onp.asarray(exp_lr(epoch).item()).item()
       lr_writer.write({"epoch": epoch, "lr": lr})
+
+  # checking fine-tune
+  # print(f"TEST ACCURACY: {config.model.target_class.breast_task.get_test_accuracy(best_weights)}")
+  # config.model.target_class.breast_task.fine_tune(best_weights)
 
   loss_list_is_eval, loss_list_eval, loss_list_pf_eval = [], [], []
   for i in range(config.eval.seeds):
@@ -528,7 +543,7 @@ def train_dds(
 
   (augmented_trajectory_det, _), _ = forward_fn_wrap(params, model_state,
                                                      rng_key, samps, True, False)
-    
+
   (augmented_trajectory_det_ext, _), _ = forward_fn_wrap(params, model_state,
                                                          rng_key, samps, True, True)
 

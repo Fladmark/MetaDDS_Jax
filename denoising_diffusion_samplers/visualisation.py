@@ -134,7 +134,7 @@ def heat_2d(dict, save_name=None, sde=True):
     data_y = []
     for sample in samples:
         x = sample[-1][0]
-        y = abs(sample[-1][1]) # change when 3d
+        y = sample[-1][1] # change when 3d
         data_x.append(x)
         data_y.append(y)
 

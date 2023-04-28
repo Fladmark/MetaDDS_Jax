@@ -15,8 +15,8 @@ import numpy as np
 
 def get_attr():
   div = 0.5
-  e = 0.000001
-  other_dim = 1
+  e = 0 #0.000001
+  other_dim = 0
   return div, e, other_dim
 
 
@@ -52,57 +52,37 @@ def funnel(d=10, sig=3, clip_y=11):
 
 first = 0
 
-def mlpw(x):
-  def unbatched(x):
-    global first
-    div, e, other_dim = get_attr()
-    v = x[0]
+class mlpw_target_class:
+
+  def f(self, v):
+    return -(-jnp.sin(3 * v) - v ** 2 + 0.7 * v)
+
+  def mlpw(self, x):
+    def unbatched(x):
+      global first
+      div, e, other_dim = get_attr()
+      v = x[0]
+      V_x = self.f(v)
+      V_x = jnp.exp(-V_x / div) + e
+      return V_x
+
+    return jax.vmap(unbatched)(x)
 
 
-    log_density_v = norm.logpdf(v,
-                                loc=0.,
-                                scale=3.)
+class carillo_target_class:
 
-    V_x = -(-jnp.sin(3 * v) - v ** 2 + 0.7 * v)
-    # print(V_x)
-    V_x = jnp.exp(-V_x / div) + e
+  def f(self, v):
+    return v**2 - 10*jnp.cos(2*jnp.pi*v) + 10
 
-    variance_other = V_x
-    # print(variance_other)
-    cov_other = jnp.eye(other_dim) * variance_other
-    mean_other = jnp.zeros(other_dim)
-    # print(f"cov other: {cov_other}")
-    log_density_other = multivariate_normal.logpdf(x[1:],
-                                                   mean=mean_other,
-                                                   cov=cov_other)
+  def carillo(self, x):
+    def unbatched(x):
+      div, e, other_dim = get_attr()
+      v = x[0]
+      V_x = self.f(v)
+      V_x = jnp.exp(-V_x / div) + e
+      return V_x
 
-    return log_density_v + log_density_other
-
-  return jax.vmap(unbatched)(x)
-
-
-def carillo(x):
-  def unbatched(x):
-    div, e, other_dim = get_attr()
-    v = x[0]
-    log_density_v = norm.logpdf(v,
-                                loc=0.,
-                                scale=3.)
-
-    V_x = v**2 - 10*jnp.cos(2*jnp.pi*v) + 10
-    # print(V_x)
-    V_x = jnp.exp(-V_x / div) + e
-    variance_other = V_x
-    # print(variance_other)
-    cov_other = jnp.eye(other_dim) * variance_other
-    mean_other = jnp.zeros(other_dim)
-    # print(f"cov other: {cov_other}")
-    log_density_other = multivariate_normal.logpdf(x[1:],
-                                                   mean=mean_other,
-                                                   cov=cov_other)
-    return log_density_v + log_density_other
-
-  return jax.vmap(unbatched)(x)
+    return jax.vmap(unbatched)(x)
 
 
 # x, y = sample[:-1], sample[-1]
@@ -111,104 +91,61 @@ def carillo(x):
 # log_density_y = multivariate_normal.logpdf(y,mean=0, cov=variance)
 # return log_density_v + log_density_y
 
+class michalewicz_target_class:
 
-def michalewicz(x):
-
-  def unbatched(x):
-    div, e, other_dim = get_attr()
+  def f(self, x):
     v, w = x[0], x[1]
+    return - ((jnp.sin(v)*jnp.sin((1*v**2)/jnp.pi)**20) + (jnp.sin(w)*jnp.sin((2*w**2)/jnp.pi)**20))
 
-    # v = jnp.where(jnp.less(v, 0), 0, v)
-    # v = jnp.where(jnp.greater(v, jnp.pi), jnp.pi, v)
-    #
-    # w = jnp.where(jnp.less(w, 0), 0, w)
-    # w = jnp.where(jnp.greater(w, jnp.pi), jnp.pi, w)
+  def michalewicz(self, x):
 
-    log_density_v = norm.logpdf(v,
-                                loc=0.,
-                                scale=3.)
+    def unbatched(x):
+      div, e, other_dim = get_attr()
+      V_x = self.f(x)
+      V_x = jnp.exp(-V_x / div) + e
 
-    log_density_w = norm.logpdf(v,
-                                loc=0.,
-                                scale=3.)
+      return V_x
 
-    #V_x = -(-jnp.sin(3 * v) - w ** 2 + 0.7 * v) #
-    V_x = - ((jnp.sin(v)*jnp.sin((1*v**2)/jnp.pi)**20) + (jnp.sin(w)*jnp.sin((2*w**2)/jnp.pi)**20))
-    # print(V_x)
-    V_x = jnp.exp(-V_x / div) + e
-    variance_other = V_x
-    # print(variance_other)
-    cov_other = jnp.eye(other_dim) * variance_other
-    mean_other = jnp.zeros(other_dim)
-    # print(f"cov other: {cov_other}")
-    log_density_other = multivariate_normal.logpdf(x[2:],
-                                                   mean=mean_other,
-                                                   cov=cov_other)
-    return log_density_v + log_density_w + log_density_other
+    return jax.vmap(unbatched)(x)
 
-  return jax.vmap(unbatched)(x)
 
-def booth(x):
+class booth_target_class:
 
-  def unbatched(x):
-    div, e, other_dim = get_attr()
+  def f(self, x):
     v, w = x[0], x[1]
+    return(v + 2*w - 7)**2 + (2*v + w - 5)**2
 
-    log_density_v = norm.logpdf(v,
-                                loc=0.,
-                                scale=3.)
+  def booth(self, x):
 
-    log_density_w = norm.logpdf(v,
-                                loc=0.,
-                                scale=3.)
+    def unbatched(x):
+      div, e, other_dim = get_attr()
+      V_x = self.f(x)
+      V_x = jnp.exp(-V_x / div) + e
 
-    #V_x = -(-jnp.sin(3 * v) - w ** 2 + 0.7 * v) #
-    V_x = (v + 2*w - 7)**2 + (2*v + w - 5)**2
-    # print(V_x)
-    V_x = jnp.exp(-V_x / div) + e
-    variance_other = V_x
-    # print(variance_other)
-    cov_other = jnp.eye(other_dim) * variance_other
-    mean_other = jnp.zeros(other_dim)
-    # print(f"cov other: {cov_other}")
-    log_density_other = multivariate_normal.logpdf(x[2:],
-                                                   mean=mean_other,
-                                                   cov=cov_other)
-    return log_density_v + log_density_w + log_density_other
+      return V_x
 
-  return jax.vmap(unbatched)(x)
+    return jax.vmap(unbatched)(x)
 
-def levy(x):
+class levy_target_class:
 
-  def unbatched(x):
-    div, e, other_dim = get_attr()
+  def f(self,x):
     v, w = x[0], x[1]
+    return jnp.sin(3*jnp.pi*v) + (v - 1)**2 * (1+jnp.sin(3*jnp.pi*w)**2) + (w-1)**2 * (1 + jnp.sin(2*jnp.pi*w)**2)
 
-    log_density_v = norm.logpdf(v,
-                                loc=0.,
-                                scale=3.)
+  def levy(self, x):
 
-    log_density_w = norm.logpdf(v,
-                                loc=0.,
-                                scale=3.)
+    def unbatched(x):
+      div, e, other_dim = get_attr()
+      V_x = self.f(x)
+      V_x = jnp.exp(-V_x / div) + e
 
-    #V_x = -(-jnp.sin(3 * v) - w ** 2 + 0.7 * v) #
-    V_x = jnp.sin(3*jnp.pi*v) + (v - 1)**2 * (1+jnp.sin(3*jnp.pi*w)**2) + (w-1)**2 * (1 + jnp.sin(2*jnp.pi*w)**2)
-    V_x = jnp.exp(-V_x / div) + e
-    variance_other = V_x
-    # print(variance_other)
-    cov_other = jnp.eye(other_dim) * variance_other
-    mean_other = jnp.zeros(other_dim)
-    # print(f"cov other: {cov_other}")
-    log_density_other = multivariate_normal.logpdf(x[2:],
-                                                   mean=mean_other,
-                                                   cov=cov_other)
-    return log_density_v + log_density_w + log_density_other
+      return V_x
 
-  return jax.vmap(unbatched)(x)
+    return jax.vmap(unbatched)(x)
 
 
 # less steep that the original layeb01
+
 def layeb01(x):
   def unbatched(x):
     div, e, other_dim = get_attr()
@@ -244,68 +181,40 @@ def layeb01(x):
 
   return jax.vmap(unbatched)(x)
 
+class layeb10_target_class:
 
-def layeb10(x):
-  def unbatched(x):
-    div, e, other_dim = get_attr()
-    v = x[0]
-    log_density_v = norm.logpdf(v,
-                                loc=0.,
-                                scale=3.)
-    #hcb.id_print(v)
-    V_x = jnp.log(v**2 + 16 + 0.5)**2 + jnp.abs(jnp.sin(v - 4)) - 9
-    #hcb.id_print(V_x)
-    # print(V_x)
-    V_x = jnp.exp(-V_x / div) + e
-    # if jnp.nonzero(V_x):
-    #   variance_other = V_x
-    # else:
-    #   variance_other = V_x + 1
-    variance_other = V_x
-    cov_other = jnp.eye(other_dim) * variance_other
-    mean_other = jnp.zeros(other_dim)
-    # print(f"cov other: {cov_other}")
-    log_density_other = multivariate_normal.logpdf(x[1:],
-                                                   mean=mean_other,
-                                                   cov=cov_other)
+  def f(self, v):
+    return jnp.log(v**2 + 16 + 0.5)**2 + jnp.abs(jnp.sin(v - 4)) - 9
 
+  def layeb10(self, x):
+    def unbatched(x):
+      div, e, other_dim = get_attr()
+      v = x[0]
+      V_x = self.f(v)
+      V_x = jnp.exp(-V_x / div) + e
+      return V_x
 
-    # global first
-    # if first < 50:
-    #     hcb.id_print(v)
-    #     hcb.id_print(V_x)
-    #     hcb.id_print(cov_other)
-    #     hcb.id_print(mean_other)
-    #     hcb.id_print(log_density_other)
-    #     first += 1
-    return log_density_v + log_density_other
-
-  return jax.vmap(unbatched)(x)
+    return jax.vmap(unbatched)(x)
 
 from experimental.xor_t import xor_task
-task = xor_task()
-def xor(x):
-  def unbatched(x):
-    div, e, other_dim = get_attr()
-    v = x[:-1]
-    sum_log_density = 0
-    for i in v:
-        sum_log_density += norm.logpdf(i,loc=0., scale=3.)
 
-    V_x = task.get_loss(v)
+class xor_target_class:
 
-    V_x = jnp.exp(-V_x / div) + e
+  def __init__(self):
+    self.xor_task = xor_task()
 
-    variance_other = V_x
-    cov_other = jnp.eye(other_dim) * variance_other
-    mean_other = jnp.zeros(other_dim)
-    log_density_other = multivariate_normal.logpdf(x[-1],
-                                                   mean=mean_other,
-                                                   cov=cov_other)
+  def f(self, v):
+    return self.xor_task.get_loss(v)
 
-    return sum_log_density + log_density_other
+  def xor(self, x):
+    def unbatched(x):
+      div, e, other_dim = get_attr()
+      v = x
+      V_x = self.f(v)
+      V_x = jnp.exp(-V_x / div) + e
+      return V_x
 
-  return jax.vmap(unbatched)(x)
+    return jax.vmap(unbatched)(x)
 
 from experimental.breastcancer_t import breast_task
 
@@ -313,26 +222,22 @@ class breast_target_class:
 
     def __init__(self):
         self.breast_task = breast_task()
+
+    def accuracy(self, v):
+      return self.breast_task.get_test_accuracy(v)
+
+    def f(self, v):
+      return self.breast_task.get_loss(v)
+
+    def f_val(self, v):
+      return self.breast_task.get_val_loss(v)
     def breast(self, x):
       def unbatched(x):
         div, e, other_dim = get_attr()
-        v = x[:-1]
-        sum_log_density = 0
-        for i in v:
-            sum_log_density += norm.logpdf(i,loc=0., scale=3.)
-
-        V_x = self.breast_task.get_loss(v)
-
+        v = x
+        V_x = self.f(v)
         V_x = jnp.exp(-V_x / div) + e
-
-        variance_other = V_x
-        cov_other = jnp.eye(other_dim) * variance_other
-        mean_other = jnp.zeros(other_dim)
-        log_density_other = multivariate_normal.logpdf(x[-1],
-                                                       mean=mean_other,
-                                                       cov=cov_other)
-
-        return sum_log_density + log_density_other
+        return V_x
 
       return jax.vmap(unbatched)(x)
 

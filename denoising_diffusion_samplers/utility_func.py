@@ -23,3 +23,41 @@ def plot_training_loss(loss_array):
     plt.title('Training Loss vs. Epochs')
     plt.grid()
     plt.show()
+
+def plot_training_and_validation_losses(training_loss_array, validation_loss_array):
+    plt.plot(training_loss_array, label='Training Loss')
+    plt.plot(validation_loss_array, label='Validation Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.title('Training and Validation Losses vs. Epochs')
+    plt.grid()
+    plt.legend()
+    plt.show()
+
+def get_smallest_loss(augmented_trajectory, config):
+    data_x = []
+    for sample in augmented_trajectory:
+        x = sample[-1][:config.model.input_dim]
+        data_x.append(x)
+    b = 1
+    w = None
+    for weights in data_x:
+        l = config.model.target_class.f(weights)
+        if l < b:
+            b = l
+            w = weights
+    return b, w
+
+def get_smallest_validation_loss(augmented_trajectory, config):
+    data_x = []
+    for sample in augmented_trajectory:
+        x = sample[-1][:config.model.input_dim]
+        data_x.append(x)
+    b = 1
+    w = None
+    for weights in data_x:
+        l = config.model.target_class.f_val(weights)
+        if l < b:
+            b = l
+            w = weights
+    return b, w

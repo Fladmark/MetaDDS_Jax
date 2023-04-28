@@ -42,7 +42,7 @@ class breast_task:
         # Define the model
 
         # Initialize the model
-        self.key = random.PRNGKey(42)
+        self.key = random.PRNGKey(43)
         self.sample_input = jnp.array(self.X_train[0])
         self.model = hk.transform(model_fn)
         self.params = self.model.init(self.key, self.sample_input)
@@ -52,6 +52,20 @@ class breast_task:
         self.params["linear"]["w"] = l
         self.params["linear_1"]["w"] = l1
         return loss_fn(self.params, self.X_train, self.y_train, self.model)
+
+    def get_val_loss(self, parameters):
+        l, l1 = parameters[:60].reshape(15,4), parameters[60:].reshape(4,1)
+        self.params["linear"]["w"] = l
+        self.params["linear_1"]["w"] = l1
+        return loss_fn(self.params, self.X_val, self.y_val, self.model)
+
+    def get_test_accuracy(self, parameters):
+        print(parameters)
+        l, l1 = parameters[:60].reshape(15,4), parameters[60:].reshape(4,1)
+        self.params["linear"]["w"] = l
+        self.params["linear_1"]["w"] = l1
+        print(self.params)
+        return accuracy(self.params, self.X_test, self.y_test, self.model)
 
     def set_weight(self, parameters):
         l, l1 = parameters[:60].reshape(15,4), parameters[60:].reshape(4,1)
@@ -64,20 +78,42 @@ class breast_task:
         else:
             self.params = self.model.init(self.key, self.sample_input)
 
-    def fine_tune(self):
-        optimizer = optax.adam(0.001)
-        opt_state = optimizer.init(self.params)
+    def fine_tune(self, params):
+        l, l1 = params[:60].reshape(15,4).astype(jnp.float32), params[60:].reshape(4,1).astype(jnp.float32)
+
+        def a(shape, dtype):
+            return l
+        def b(shape, dtype):
+            return l1
+
+        def model_updated(x):
+            net = hk.Sequential([
+                hk.Linear(4, w_init=a), jax.nn.relu,
+                hk.Linear(1, w_init=b), jax.nn.sigmoid
+            ])
+            return net(x)
+
+        self.model = hk.transform(model_updated)
+        params = self.model.init(self.key, self.sample_input)
+
+        optimizer = optax.adam(0.0001)
+        opt_state = optimizer.init(params)
 
         # Train the model
         epochs = 10000
         for epoch in range(epochs):
-            params, opt_state = update(params, self.X_train, self.y_train, opt_state, optimizer)
+            grads = jax.grad(loss_fn)(params, self.X_train,  self.y_train, self.model)
+            updates, opt_state = optimizer.update(grads, opt_state)
+            params = optax.apply_updates(params, updates)
+            #params, opt_state = update(params, self.X_train, self.y_train, opt_state)
             if epoch % 100 == 0:
-                train_loss = loss_fn(params, self.X_train, self.y_train)
+                train_loss = loss_fn(params, self.X_train, self.y_train, self.model)
                 print(f"Epoch: {epoch}, Loss: {train_loss}")
 
         # Evaluate the model
 
-        train_acc = accuracy(params, jnp.array(self.X_train), jnp.array(self.y_train))
-        test_acc = accuracy(params, jnp.array(self.X_test), jnp.array(self.y_test))
+        train_acc = accuracy(params, jnp.array(self.X_train), jnp.array(self.y_train), self.model)
+        test_acc = accuracy(params, jnp.array(self.X_test), jnp.array(self.y_test), self.model)
         print(f"Train accuracy: {train_acc}, Test accuracy: {test_acc}")
+
+        return params
