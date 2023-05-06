@@ -37,15 +37,15 @@ class xor_task:
         self.params = self.model.init(rng, self.X_train)
 
     def get_loss(self, parameters):
-        a, b, c, d, e, f = parameters
+        a, b, c, d, e, f, g, h, i = parameters
         new_params = {
             'linear': {
                 'w': jnp.array([[a, b], [c, d]]),
-                'b': jnp.array([0, 0]),
+                'b': jnp.array([g, h]),
             },
             'linear_1': {
                 'w': jnp.array([[e], [f]]),
-                'b': jnp.array([0]),
+                'b': jnp.array([i]),
             },
         }
         for param in self.params:
@@ -55,15 +55,16 @@ class xor_task:
 
 
 
-task = xor_task()
-
-b = 1
-for i in range(10000):
-    k = task.get_loss(np.random.rand(6)*5)
-    if k < b:
-        print(k)
-        b = k
-print(b)
+# task = xor_task()
+# print(task.params)
+#
+# b = 1
+# for i in range(10000):
+#     k = task.get_loss(np.random.rand(6)*5)
+#     if k < b:
+#         print(k)
+#         b = k
+# print(b)
 
 
 

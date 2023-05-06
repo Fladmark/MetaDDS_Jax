@@ -123,8 +123,11 @@ def plot_3d(dict, save_name=None, sde=True):
     # Show the plot
     plt.show()
 
-def heat_2d(dict, save_name=None, sde=True):
-    if sde:
+def heat_2d(dict, save_name=None, sde=True, not_dict=False):
+    if not_dict:
+        aug="sde"
+        samples = dict
+    elif sde:
         aug = "sde"
         samples = dict[-1]["aug"]
     else:
@@ -132,11 +135,18 @@ def heat_2d(dict, save_name=None, sde=True):
         samples = dict[-1]["aug_ode"]
     data_x = []
     data_y = []
+    data_x1 = []
+    data_y1 = []
     for sample in samples:
         x = sample[-1][0]
         y = sample[-1][1] # change when 3d
         data_x.append(x)
         data_y.append(y)
+        x1 = sample[-1][2]
+        y1 = sample[-1][3] # change when 3d
+        data_x1.append(x1)
+        data_y1.append(y1)
+
 
     # Compute the 2D histogram values
     hist, x_edges, y_edges = np.histogram2d(data_x, data_y, bins=50)
@@ -156,6 +166,82 @@ def heat_2d(dict, save_name=None, sde=True):
 
     if save_name:
         plt.savefig("images/" + save_name + f"_heat_2d_{aug}.png")
+
+    # Show the plot
+    plt.show()
+
+def heat_2d_double(dict, losses=None, save_name=None, sde=True, not_dict=False):
+    if not_dict:
+        aug="sde"
+        samples = dict
+    elif sde:
+        aug = "sde"
+        samples = dict[-1]["aug"]
+    else:
+        aug = "ode"
+        samples = dict[-1]["aug_ode"]
+
+    data_x = []
+    data_y = []
+    data_x1 = []
+    data_y1 = []
+
+    for sample in samples:
+        x = sample[-1][0]
+        y = sample[-1][1] # change when 3d
+        data_x.append(x)
+        data_y.append(y)
+        x1 = sample[-1][2]
+        y1 = sample[-1][3] # change when 3d
+        data_x1.append(x1)
+        data_y1.append(y1)
+
+    # Compute the 2D histogram values
+    # hist, x_edges, y_edges = np.histogram2d(data_x, data_y, bins=50, range=[[-4, 11], [-4, 11]])
+    # hist1, x1_edges, y1_edges = np.histogram2d(data_x1, data_y1, bins=50, range=[[-4, 11], [-4, 11]])
+
+    hist, x_edges, y_edges = np.histogram2d(data_x, data_y, bins=50)
+    hist1, x1_edges, y1_edges = np.histogram2d(data_x1, data_y1, bins=50)
+
+    if losses:
+        fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3, figsize=(15, 4))
+    else:
+        fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(10, 4))
+
+    im1 = ax1.imshow(hist.T, origin='lower', extent=[x_edges[0], x_edges[-1], y_edges[0], y_edges[-1]], aspect='auto',
+                     interpolation='nearest')
+    ax1.set_xlabel('X Value')
+    ax1.set_ylabel('Y Value')
+    # ax1.set_xlim(-4, 11)
+    # ax1.set_ylim(-4, 11)
+    cbar1 = fig.colorbar(im1, ax=ax1)
+    cbar1.set_label('Frequency')
+
+    im2 = ax2.imshow(hist1.T, origin='lower', extent=[x1_edges[0], x1_edges[-1], y1_edges[0], y1_edges[-1]], aspect='auto',
+                     interpolation='nearest')
+    ax2.set_xlabel('X1 Value')
+    ax2.set_ylabel('Y1 Value')
+    # ax2.set_xlim(-4, 11)
+    # ax2.set_ylim(-4, 11)
+    cbar2 = fig.colorbar(im2, ax=ax2)
+    cbar2.set_label('Frequency')
+
+    if losses:
+        # Loss subplot
+        last_losses = losses
+        if len(last_losses) < len(losses):
+            add = len(losses) - len(last_losses)
+        else:
+            add = 0
+        ax3.plot(range(add, len(last_losses) + add), last_losses, marker='o')
+        ax3.set_xlabel('Iteration')
+        ax3.set_ylabel('Loss')
+        ax3.set_title('Loss per iteration')
+
+    fig.tight_layout()
+
+
+    plt.savefig("images/gif/" + f"{len(losses)}.png")
 
     # Show the plot
     plt.show()

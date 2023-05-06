@@ -2,8 +2,6 @@ import utility_func
 from dds.configs.config import set_task, get_config
 from dds.train_dds import train_dds
 from utility_func import *
-import numpy as onp
-from utility_func import *
 
 """
 HYPERPARAMETERS:
@@ -84,7 +82,7 @@ for div in divs:
             funnel_config.trainer.learning_rate = 5 * 10 ** (-3)
             funnel_config.trainer.lr_sch_base_dec = 0.95  # For funnel
 
-            funnel_config.trainer.epochs = 3000
+            funnel_config.trainer.epochs = 500
             out_dict = train_dds(funnel_config)
 
 

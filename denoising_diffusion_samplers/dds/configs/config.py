@@ -147,7 +147,7 @@ def get_config():
   return config
 
 
-def set_task(config, task="lr_sonar"):
+def set_task(config, task="lr_sonar", div=1, c=1):
   """Sets up task specific attributes for config.
 
   Args:
@@ -185,7 +185,7 @@ def set_task(config, task="lr_sonar"):
   elif task == "mlpw":
     config.model.input_dim = 1
     config.model.elbo_batch_size = 2000
-    config.model.target_class = toy_targets.mlpw_target_class()
+    config.model.target_class = toy_targets.mlpw_target_class(div, c)
     mlpw_target = config.model.target_class.mlpw
     config.trainer.lnpi = mlpw_target
     config.model.target = mlpw_target
@@ -193,7 +193,7 @@ def set_task(config, task="lr_sonar"):
   elif task == "carillo":
     config.model.input_dim = 1
     config.model.elbo_batch_size = 2000
-    config.model.target_class = toy_targets.carillo_target_class()
+    config.model.target_class = toy_targets.carillo_target_class(div, c)
     target = config.model.target_class.carillo
     config.trainer.lnpi = target
     config.model.target = target
@@ -208,15 +208,15 @@ def set_task(config, task="lr_sonar"):
   elif task == "layeb10":
     config.model.input_dim = 1
     config.model.elbo_batch_size = 2000
-    config.model.target_class = toy_targets.layeb10_target_class()
+    config.model.target_class = toy_targets.layeb10_target_class(div, c)
     layeb01_target = config.model.target_class.layeb10
     config.trainer.lnpi = layeb01_target
     config.model.target = layeb01_target
 
   elif task == "xor":
-    config.model.input_dim = 6
+    config.model.input_dim = 9
     config.model.elbo_batch_size = 2000
-    config.model.target_class = toy_targets.xor_target_class()
+    config.model.target_class = toy_targets.xor_target_class(div, c)
     target = config.model.target_class.xor
     config.trainer.lnpi = target
     config.model.target = target
@@ -225,15 +225,23 @@ def set_task(config, task="lr_sonar"):
     config.model.input_dim = 64
     config.model.elbo_batch_size = 2000
     config.model.val = True
-    config.model.target_class = toy_targets.breast_target_class()
+    config.model.target_class = toy_targets.breast_target_class(div, c)
     target = config.model.target_class.breast
+    config.trainer.lnpi = target
+    config.model.target = target
+
+  elif task == "moons":
+    config.model.input_dim = 41
+    config.model.elbo_batch_size = 32
+    config.model.target_class = toy_targets.moons_target_class(div, c)
+    target = config.model.target_class.moon
     config.trainer.lnpi = target
     config.model.target = target
 
   elif task == "michalewicz":
     config.model.input_dim = 2
     config.model.elbo_batch_size = 2000
-    config.model.target_class = toy_targets.michalewicz_target_class()
+    config.model.target_class = toy_targets.michalewicz_target_class(div, c)
     target = config.model.target_class.michalewicz
     config.trainer.lnpi = target
     config.model.target = target
@@ -241,7 +249,15 @@ def set_task(config, task="lr_sonar"):
   elif task == "levy":
     config.model.input_dim = 2
     config.model.elbo_batch_size = 2000
-    config.model.target_class = toy_targets.levy_target_class()
+    config.model.target_class = toy_targets.levy_target_class(div, c)
+    target = config.model.target_class.levy
+    config.trainer.lnpi = target
+    config.model.target = target
+
+  elif task == "levy2":
+    config.model.input_dim = 2
+    config.model.elbo_batch_size = 2000
+    config.model.target_class = toy_targets.levy_target_class2(div, c)
     target = config.model.target_class.levy
     config.trainer.lnpi = target
     config.model.target = target
@@ -249,7 +265,7 @@ def set_task(config, task="lr_sonar"):
   elif task == "booth":
     config.model.input_dim = 2
     config.model.elbo_batch_size = 2000
-    config.model.target_class = toy_targets.booth_target_class()
+    config.model.target_class = toy_targets.booth_target_class(div, c)
     target = config.model.target_class.booth
     config.trainer.lnpi = target
     config.model.target = target

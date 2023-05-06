@@ -89,7 +89,7 @@ def update(params, x, y_true, opt_state):
     return params, opt_state
 
 # Set hyperparameters and optimizer
-learning_rate = 0.1
+learning_rate = 0.001
 epochs = 10000
 optimizer = optax.adam(learning_rate)
 opt_state = optimizer.init(params)

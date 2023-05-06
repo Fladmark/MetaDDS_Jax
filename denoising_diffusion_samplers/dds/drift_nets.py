@@ -252,6 +252,11 @@ class PISGRADNet(hk.Module):
         for x in self.architecture_specs.fully_connected_units
     ] + [LinearZero(dim)])
 
+    sig_pred = hk.Sequential([
+        hk.Sequential([hk.Linear(x), architecture_specs.activation])
+        for x in architecture_specs.fully_connected_units
+    ] + [hk.Linear(1), jax.nn.sigmoid])
+
     self.state_dim = dim
     self.dim = dim + 1
     self._grad_ln = hk.LayerNorm(-1, True, True)

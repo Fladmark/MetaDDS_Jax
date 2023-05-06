@@ -14,7 +14,7 @@ import numpy as np
 
 
 def get_attr():
-  div = 1
+  div = 0.5
   e = 0 #0.000001
   other_dim = 0
   return div, e, other_dim
@@ -54,33 +54,45 @@ first = 0
 
 class mlpw_target_class:
 
+  def __init__(self, div, c):
+    self.e = 0
+    self.div = div
+    self.c = c
+
   def f(self, v):
     return -(-jnp.sin(3 * v) - v ** 2 + 0.7 * v)
 
   def mlpw(self, x):
     def unbatched(x):
       global first
-      div, e, other_dim = get_attr()
+      #div, e, other_dim = get_attr()
       v = x[0]
       V_x = self.f(v)
-      V_x = jnp.exp(-V_x / div) + e
-      return V_x
+      V_x = jnp.exp(-V_x / self.div) + self.e
+      return V_x * self.c
+      return -norm.logpdf(V_x,loc=0., scale=3.)
 
     return jax.vmap(unbatched)(x)
 
 
 class carillo_target_class:
 
+  def __init__(self, div, c):
+    self.e = 0
+    self.div = div
+    self.c = c
+
   def f(self, v):
     return v**2 - 10*jnp.cos(2*jnp.pi*v) + 10
 
   def carillo(self, x):
     def unbatched(x):
-      div, e, other_dim = get_attr()
+      #div, e, other_dim = get_attr()
       v = x[0]
       V_x = self.f(v)
-      V_x = jnp.exp(-V_x / div) + e
-      return V_x
+      V_x = jnp.exp(-V_x / self.div) + self.e
+      return V_x * self.c
+      return -norm.logpdf(V_x,loc=0., scale=3.)
 
     return jax.vmap(unbatched)(x)
 
@@ -93,6 +105,11 @@ class carillo_target_class:
 
 class michalewicz_target_class:
 
+  def __init__(self, div, c):
+    self.e = 0
+    self.div = div
+    self.c = c
+
   def f(self, x):
     v, w = x[0], x[1]
     return - ((jnp.sin(v)*jnp.sin((1*v**2)/jnp.pi)**20) + (jnp.sin(w)*jnp.sin((2*w**2)/jnp.pi)**20))
@@ -100,16 +117,21 @@ class michalewicz_target_class:
   def michalewicz(self, x):
 
     def unbatched(x):
-      div, e, other_dim = get_attr()
+      #div, e, other_dim = get_attr()
       V_x = self.f(x)
-      V_x = jnp.exp(-V_x / div) + e
+      V_x = jnp.exp(-V_x / self.div) + self.e
 
-      return V_x
+      return V_x * self.c
 
     return jax.vmap(unbatched)(x)
 
 
 class booth_target_class:
+
+  def __init__(self, div, c):
+    self.e = 0
+    self.div = div
+    self.c = c
 
   def f(self, x):
     v, w = x[0], x[1]
@@ -118,15 +140,20 @@ class booth_target_class:
   def booth(self, x):
 
     def unbatched(x):
-      div, e, other_dim = get_attr()
+      #div, e, other_dim = get_attr()
       V_x = self.f(x)
-      V_x = jnp.exp(-V_x / div) + e
+      V_x = jnp.exp(-V_x / self.div) + self.e
 
-      return V_x
+      return V_x * self.c
 
     return jax.vmap(unbatched)(x)
 
 class levy_target_class:
+
+  def __init__(self, div, c):
+    self.e = 0
+    self.div = div
+    self.c = c
 
   def f(self,x):
     v, w = x[0], x[1]
@@ -135,13 +162,44 @@ class levy_target_class:
   def levy(self, x):
 
     def unbatched(x):
-      div, e, other_dim = get_attr()
+      #div, e, other_dim = get_attr()
       V_x = self.f(x)
-      V_x = jnp.exp(-V_x / div) + e
+      V_x = jnp.exp(-V_x / self.div) + self.e
 
-      return V_x
+      return V_x * self.c
 
     return jax.vmap(unbatched)(x)
+
+
+
+class levy_target_class2:
+
+  def __init__(self, div, c):
+    self.e = 0
+    self.div = div
+    self.c = c
+
+  def f(self,x, type="opt"):
+    w = 1 + (x - 1) / 4
+
+    term1 = (jnp.sin(jnp.pi * w[0])) ** 2
+    term3 = (jnp.sin(2 * jnp.pi * w[-1])) ** 2
+    term2 = jnp.sum((w[:-1] - 1) ** 2 * (1 + 10 * (jnp.sin(jnp.pi * w[1:])) ** 2))
+    return np.sum(100 * (x[1:] - x[:-1] ** 2) ** 2 + (1 - x[:-1]) ** 2)
+    return term1 + term2 + term3
+
+  def levy(self, x):
+
+    def unbatched(x):
+      #div, e, other_dim = get_attr()
+      V_x = self.f(x)
+      V_x = jnp.exp(-V_x / self.div) + self.e
+
+      return V_x * self.c
+
+    return jax.vmap(unbatched)(x)
+
+
 
 
 # less steep that the original layeb01
@@ -183,16 +241,21 @@ def layeb01(x):
 
 class layeb10_target_class:
 
+  def __init__(self, div, c):
+    self.e = 0
+    self.div = div
+    self.c = c
+
   def f(self, v):
     return jnp.log(v**2 + 16 + 0.5)**2 + jnp.abs(jnp.sin(v - 4)) - 9
 
   def layeb10(self, x):
     def unbatched(x):
-      div, e, other_dim = get_attr()
+      #div, e, other_dim = get_attr()
       v = x[0]
       V_x = self.f(v)
-      V_x = jnp.exp(-V_x / div) + e
-      return V_x
+      V_x = jnp.exp(-V_x / self.div) + self.e
+      return V_x * self.c
 
     return jax.vmap(unbatched)(x)
 
@@ -200,19 +263,22 @@ from experimental.xor_t import xor_task
 
 class xor_target_class:
 
-  def __init__(self):
+  def __init__(self, div, c):
     self.xor_task = xor_task()
+    self.e = 0
+    self.div = div
+    self.c = c
 
-  def f(self, v):
+  def f(self, v, type="training"):
     return self.xor_task.get_loss(v)
 
   def xor(self, x):
     def unbatched(x):
-      div, e, other_dim = get_attr()
+      #div, e, other_dim = get_attr()
       v = x
       V_x = self.f(v)
-      V_x = jnp.exp(-V_x / div) + e
-      return V_x
+      V_x = jnp.exp(-V_x / self.div) + self.e
+      return V_x * self.c
 
     return jax.vmap(unbatched)(x)
 
@@ -220,26 +286,59 @@ from experimental.breastcancer_t import breast_task
 
 class breast_target_class:
 
-    def __init__(self):
+    def __init__(self, div, c):
         self.breast_task = breast_task()
+        self.e = 0
+        self.div = div
+        self.c = c
 
-    def accuracy(self, v):
-      return self.breast_task.get_test_accuracy(v)
+    def accuracy(self, v, type="training"):
+      return self.breast_task.get_accuracy(v, type)
 
-    def f(self, v):
-      return self.breast_task.get_loss(v)
+    def f(self, v, type="training"):
+      return self.breast_task.get_loss(v, type)
 
     def f_val(self, v):
       return self.breast_task.get_val_loss(v)
     def breast(self, x):
       def unbatched(x):
-        div, e, other_dim = get_attr()
+        #div, e, other_dim = get_attr()
         v = x
         V_x = self.f(v)
-        V_x = jnp.exp(-V_x / div) + e
-        return V_x
+        V_x = jnp.exp(-V_x / self.div) + self.e
+        return V_x * self.c
 
       return jax.vmap(unbatched)(x)
+
+
+from experimental.moons_t import moon_task
+
+class moons_target_class:
+
+  def __init__(self, div, c):
+    self.moon_task = moon_task()
+    self.e = 0
+    self.div = div
+    self.c = c
+
+  def f(self, v, type="training"):
+    return self.moon_task.get_loss(v, type)
+
+  def accuracy(self, v, type="training"):
+    return self.moon_task.get_accuracy(v, type)
+
+  def pred(self, v):
+    return self.moon_task.get_pred(v)
+
+  def moon(self, x):
+    def unbatched(x):
+      #div, e, other_dim = get_attr()
+      v = x
+      V_x = self.f(v)
+      V_x = jnp.exp(-V_x / self.div) + self.e
+      return V_x * self.c
+
+    return jax.vmap(unbatched)(x)
 
 def simple_gaussian(d=2, sigma=1):
   """Wrapper method for simple Gaussian test distribution.
@@ -339,7 +438,8 @@ def mixture_well():
     Returns:
       nx1 vector containing density evaluations
     """
-
+    print(x)
+    print(x.shape)
     mu = 1.0
     sigma2_ = 0.05
     mus_full = np.array([

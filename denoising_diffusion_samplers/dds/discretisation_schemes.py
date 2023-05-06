@@ -1,7 +1,7 @@
 """Time discretisation schemes.
 """
 from jax import numpy as np
-
+import jax.experimental.host_callback as hcb
 
 def power_fn_step_scheme(start, end, dt, exp=0.9, dtype=np.float32, **_):
   """Exponent decay step scheme from Zhang et al. 2021.
@@ -62,6 +62,7 @@ def cos_sq_fn_step_scheme(
   Returns:
     time grid
   """
+
   n_steps = int((end - start) / dt)
 
   pre_phase = np.linspace(start, end, n_steps, dtype=dtype) / end
@@ -70,10 +71,8 @@ def cos_sq_fn_step_scheme(
   # (removed sqrt from solver only sqrd here) and it made no difference to
   # results
   dts = np.cos(phase)**4
-
   dts /= dts.sum()
   dts *= end  # We normalise s.t. \sum_k \beta_k = T (where beta_k = b_m*cos^4)
-
   dts_out = np.concatenate((np.array([start]), np.cumsum(dts)))
   return dts_out
 
@@ -130,9 +129,11 @@ def linear_step_scheme(
   dt_ = np.abs(ts[1]- ts[0])
   m = (dt_max - dt_min) / (end - dt_)  # gradient
 
+
   uts = dt_max - m * np.abs(ts[:-1])
   uts = start + (uts * end) / uts.sum()
   dts = np.concatenate((ts[0][None], np.cumsum(uts)))
+  hcb.id_print(uts)
   return dts
 
 
@@ -162,9 +163,11 @@ def linear_step_scheme_dds(start,
 
   n_steps = int((end- start) / dt)
   uts = np.linspace(dt_min, dt_max, n_steps, dtype=dtype)[::-1]
+  hcb.id_print(uts)
 
   dts = np.cumsum(uts)
   # import pdb; pdb.set_trace()
+  hcb.id_print(dts)
   return dts
 
 
@@ -223,6 +226,7 @@ def small_lst_step_scheme(start, end, dt, step_fac=100, dtype=np.float32, **_):
 
   ts = np.concatenate((ts, t_pen[None]), axis=0)
   ts = np.concatenate((ts, t_fin[None]), axis=0)
+  hcb.id_print(ts)
   return ts
 
 

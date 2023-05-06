@@ -1,6 +1,7 @@
 """Different stoch control objectives satisfying same HJB fixed points.
 """
 import distrax
+from jax import grad
 from jax import numpy as np
 from jax import scipy as jscipy
 import jax.experimental.host_callback as hcb
@@ -35,6 +36,20 @@ def ou_terminal_loss(x_terminal, lnpi, sigma=1.0, tfinal=1.0, brown=False):
   log_ou_equilibrium = equi_normal.log_prob(x_terminal)
   lrnd = -(ln_target - log_ou_equilibrium)
 
+  #
+  # def get_ln_target(w):
+  #   return lnpi(w).mean()
+  #
+  # get_grad_ln_target = grad(get_ln_target)
+  # g = get_grad_ln_target(x_terminal)
+  #
+  # hcb.id_print(g)
+  #hcb.id_print(grad(lnpi)(x_terminal))
+
+  # hcb.id_print(log_ou_equilibrium)
+  # hcb.id_print(ln_target)
+
+
   return lrnd
 
 
@@ -61,8 +76,11 @@ def relative_kl_objective(augmented_trajectory, g,
   stl = augmented_trajectory[:, -1, dim] if stl else 0
 
   terminal_cost = g(x_final_time)
-  #hcb.id_print((energy_cost_dt).mean())
-  #hcb.id_print((terminal_cost).mean())
+  # hcb.id_print((energy_cost_dt).mean())
+  # hcb.id_print((terminal_cost).mean())
+  # hcb.id_print(stl)
+
+
   #hcb.id_print((x_final_time))
   #hcb.id_print((energy_cost_dt + terminal_cost + stl).mean())
   loss = (energy_cost_dt + terminal_cost + stl).mean()
