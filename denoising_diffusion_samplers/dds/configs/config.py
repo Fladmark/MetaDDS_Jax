@@ -230,6 +230,15 @@ def set_task(config, task="lr_sonar", div=1, c=1):
     config.trainer.lnpi = target
     config.model.target = target
 
+  elif task == "forest":
+    config.model.input_dim = 1247
+    config.model.elbo_batch_size = 2000
+    config.model.val = True
+    config.model.target_class = toy_targets.forest_target_class(div, c)
+    target = config.model.target_class.forest
+    config.trainer.lnpi = target
+    config.model.target = target
+
   elif task == "moons":
     config.model.input_dim = 41
     config.model.elbo_batch_size = 32
@@ -259,6 +268,14 @@ def set_task(config, task="lr_sonar", div=1, c=1):
     config.model.elbo_batch_size = 2000
     config.model.target_class = toy_targets.levy_target_class2(div, c)
     target = config.model.target_class.levy
+    config.trainer.lnpi = target
+    config.model.target = target
+
+  elif task == "anneal":
+    config.model.input_dim = 1
+    config.model.elbo_batch_size = 4
+    config.model.target_class = toy_targets.anneal_target_class(div, c)
+    target = config.model.target_class.anneal
     config.trainer.lnpi = target
     config.model.target = target
 

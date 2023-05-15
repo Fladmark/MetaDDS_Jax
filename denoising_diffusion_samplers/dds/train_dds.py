@@ -453,7 +453,7 @@ def train_dds(
 
 
     # #Training loss
-    if epoch % 5 == 0:
+    if epoch % 2 == 0:
 
         eval_report(trainable_params, non_trainable_params,
                     model_state, subkeys, batch_size_elbo, epoch,
@@ -507,6 +507,18 @@ def train_dds(
 
         if best_averaged_val_acc >= max(accumulated_validation_acc_avg):
             best_weights_avg = w_best_v_acc_avg
+
+        accuracy = config.model.target_class.accuracy(best_weights, "test")
+        accuracy_avg = config.model.target_class.accuracy(best_weights_avg, "test")
+
+        accuracy_train = config.model.target_class.accuracy(best_training_weights, "test")
+        accuracy_train_avg = config.model.target_class.accuracy(best_training_weights_avg, "test")
+        print("WITH VAL")
+        print(f"Test Accuracy: {accuracy}")
+        print(f"Test Accuracy (AVG): {accuracy_avg}")
+        print("WITH TRAIN")
+        print(f"Test Accuracy: {accuracy_train}")
+        print(f"Test Accuracy (AVG): {accuracy_train_avg}")
 
 
 
@@ -563,7 +575,7 @@ def train_dds(
 
   import numpy as np
   import matplotlib.pyplot as plt
-  if True:
+  if False:
       list_of_weights = [best_weights, best_weights_avg, best_training_weights, best_training_weights_avg]
       for weight in list_of_weights:
           X_test, y_pred = config.model.target_class.pred(weight)

@@ -409,7 +409,8 @@ def train_dds_anneal(
         trainable_params, non_trainable_params,
         model_state, rng_key, batch_size, is_training, ode, exact, new_target=t)
     loss = jax.device_get(loss)
-    loss = onp.asarray(utils.get_first(loss).item()).item()
+    #loss = onp.asarray(utils.get_first(loss).item()).item()
+
 
     log_string = "epoch: %s %s  loss: %s", epoch, "TRAIN", loss
     logging.info(log_string)
@@ -437,14 +438,20 @@ def train_dds_anneal(
     rng_key = next(seq)
     subkeys = jax.random.split(rng_key, device_no)
 
+    # trainable_params, opt_state, model_state = update(trainable_params,
+    #                                                   non_trainable_params,
+    #                                                   model_state, opt_state,
+    #                                                   subkeys, batch_size_)#
+
     trainable_params, opt_state, model_state = update(trainable_params,
                                                       non_trainable_params,
                                                       model_state, opt_state,
-                                                      subkeys, batch_size_)
+                                                      subkeys, 10)
+
 
 
     # #Training loss
-    if epoch % 10 == 0:
+    if epoch % 1000 == 0:
 
         eval_report(trainable_params, non_trainable_params,
                     model_state, subkeys, batch_size_elbo, epoch,

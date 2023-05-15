@@ -19,7 +19,7 @@ if funnel_config.model.reference_process_key == "oudstl":
 from dds.targets.toy_targets import get_attr
 
 ### SET TASK
-task = "breastcancer"
+task = "anneal"
 div = 1000
 c = 100000
 
@@ -45,7 +45,6 @@ funnel_config.model.reference_process_key = "oudstl"
 
 if funnel_config.model.reference_process_key == "oudstl":
     funnel_config.model.step_scheme_key = "cos_sq"
-    funnel_config.model.step_scheme_key = "last_small"
     # Opt setting for funnel
     funnel_config.model.sigma = 1.075
     funnel_config.model.alpha = 0.6875
@@ -77,20 +76,20 @@ funnel_config.model.ts.shape
 # %%
 
 
-funnel_config.model.input_dim = 171
+funnel_config.model.input_dim = 1
 funnel_config.trainer.epochs = 51
 
 # divs = [1000, 100, 50, 25, 10]
 # epochs = [51, 151, 301, 301, 301]
 # lrs = [0.0001, 0.00001, 0.000001, 0.0000001, 0.00000001]
 
-epochs = [51, 301, 301]
-divs = [1, 100, 10]
-lrs = [0.001, 0.001, 0.001]
+epochs = [20]
+divs = [100]
+lrs = [0.001]
 
 eval = False
 pretrained = None
-iterations = 20
+iterations = 1
 for i in range(iterations):
     if iterations == i + 1:
         eval = True
@@ -102,7 +101,5 @@ for i in range(iterations):
 
     print("\n\n")
 
-
-print(trainable_params)
-print("\n\n\n\n")
-print(non_trainable_params)
+sde_targ = results_dict["aug"][-1]
+print(sde_targ)

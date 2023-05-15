@@ -176,7 +176,7 @@ def accuracy(params, x, y_true, model):
 
 class breast_task:
 
-    def __init__(self):
+    def __init__(self, state=42):
         # Transforms
         self.task_model = hk.without_apply_rng(hk.transform(task_model))
         self.X, self.y = generate_breast_cancer_data()
@@ -189,7 +189,7 @@ class breast_task:
         # Initialize parameters
         DATASIZE = self.X.shape[1]
         GTSIZE = 1
-        key = random.PRNGKey(42)
+        key = random.PRNGKey(state)
         x_sample = jnp.zeros((1, DATASIZE))
         self.params = self.task_model.init(key, x_sample)
         for p in self.params:
@@ -210,15 +210,17 @@ class breast_task:
             y_pred = self.task_model.apply(self.params, self.X_test)
             loss = jnp.mean(binary_cross_entropy_loss(self.y_test, y_pred))
         else:
-            indecies = np.array(range(self.idx, self.idx + self.batch_size)) % (self.X_train.shape[0] - 1)
-            self.idx += self.batch_size
-            if self.idx > self.X.shape[0] - 1:
-                self.idx = self.idx % (self.X_train.shape[0] - 1)
-            #print(indecies)
-            x_batch = self.X_train[indecies]
-            y_batch = self.y_train[indecies]
-            y_pred = self.task_model.apply(self.params, x_batch)
-            loss = jnp.mean(binary_cross_entropy_loss(y_batch, y_pred))
+            y_pred = self.task_model.apply(self.params, self.X_train)
+            loss = jnp.mean(binary_cross_entropy_loss(self.y_train, y_pred))
+            # indecies = np.array(range(self.idx, self.idx + self.batch_size)) % (self.X_train.shape[0] - 1)
+            # self.idx += self.batch_size
+            # if self.idx > self.X.shape[0] - 1:
+            #     self.idx = self.idx % (self.X_train.shape[0] - 1)
+            # #print(indecies)
+            # x_batch = self.X_train[indecies]
+            # y_batch = self.y_train[indecies]
+            # y_pred = self.task_model.apply(self.params, x_batch)
+            # loss = jnp.mean(binary_cross_entropy_loss(y_batch, y_pred))
         return loss
 
     def get_training_loss(self, parameters, type="training"):
@@ -252,23 +254,25 @@ class breast_task:
         else:
             return accuracy(self.params, self.X_train, self.y_train, self.task_model)
 
-    def train(self, epochs, learning_rate):
+    def train(self, opt, epochs, learning_rate=0.005):
         # Setup optimizer
-        optimizer = optax.adam(0.001)
+        optimizer = opt#optax.noisy_sgd(learning_rate, 0.001, 0.75)
         opt_state = optimizer.init(self.params)
 
 
         @jit
         def update(params, opt_state):
             grads = jax.grad(self.get_training_loss)(params, "training")
-            updates, opt_state = optimizer.update(grads, opt_state)
+            updates, opt_state = optimizer.update(grads, opt_state,params=params)
             params = optax.apply_updates(params, updates)
             return params, opt_state
 
         # Training loop
+        vals = []
         for epoch in range(epochs):
             # Update parameters
             self.params, opt_state = update(self.params, opt_state)
+            vals.append(accuracy(self.params, self.X_val, self.y_val, self.task_model))
 
         # Compute loss and accuracy
         train_loss = self.get_training_loss(self.params, "training")
@@ -279,8 +283,17 @@ class breast_task:
         print(f"Epoch {epoch + 1}/{epochs}")
         print(f"Train Loss: {train_loss:.4f}, Train Accuracy: {train_accuracy:.4f}")
         print(f"Test Loss: {test_loss:.4f}, Test Accuracy: {test_accuracy:.4f}")
+        return accuracy(self.params, self.X_test, self.y_test, self.task_model), vals
 
-# Example usage
-# task = breast_task()
+
+
+# lrs = [0.01, 0.005, 0.0025 ,0.001, 0.0005, 0.00025]
 #
-# task.train(epochs=10000, learning_rate=0.001)
+# vals = [0] * 6
+# #for key in [42,43,44]:
+# for idx, lr in enumerate(lrs):
+#     task = breast_task()
+#     best_val = task.train(epochs=20000, learning_rate=lr)
+#     vals[idx] += best_val
+#
+# print(vals)

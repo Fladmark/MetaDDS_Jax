@@ -1,73 +1,115 @@
-from dds.configs.config import set_task, get_config
-from dds.train_dds import train_dds
+import jax
+import optax
+import jax.numpy as jnp
+import haiku as hk
+from flax import linen as nn
+from tensorflow_datasets import as_numpy
+import tensorflow_datasets as tfds
 
-import numpy as onp
+# Load MNIST dataset
+def load_dataset(split, batch_size):
+    ds = tfds.load('mnist', split=split, shuffle_files=True, as_supervised=True)
+    ds = ds.map(lambda x, y: (x / 255, y))
+    ds = ds.batch(batch_size)
+    ds = as_numpy(ds)
+    return ds
 
-# %%
-funnel_config = get_config()
+train_dataset = load_dataset("train", batch_size=128)
+test_dataset = load_dataset("test", batch_size=128*79)
 
-# Time and step settings (Need to be done before calling set_task)
-funnel_config.model.tfinal = 6.4
-funnel_config.model.dt = 0.05  # 0.05
+print(len(test_dataset))
 
-if funnel_config.model.reference_process_key == "oudstl":
-    funnel_config.model.step_scheme_key = "cos_sq"
+# Define the LeNet model
+def LeNet5(n_classes):
+    def model(x):
+        x = hk.Conv2D(output_channels=6, kernel_shape=5, stride=1)(x)
+        x = jnp.tanh(x)
+        x = hk.AvgPool(window_shape=2, strides=2,padding="VALID")(x)
+        x = hk.Conv2D(output_channels=5, kernel_shape=5, stride=1)(x)
+        x = jnp.tanh(x)
+        x = hk.AvgPool(window_shape=3, strides=3,padding="VALID")(x)
+        #x = x.reshape((x.shape[0], -1))
+        x = hk.Flatten()(x)
+        x = hk.Linear(120)(x)
+        x = jnp.tanh(x)
+        x = hk.Linear(84)(x)
+        x = jnp.tanh(x)
+        x = hk.Linear(n_classes)(x)
+        return x
+    return model
 
-from dds.targets.toy_targets import get_attr
+# Now you can create a model instance:
+lenet5 = LeNet5(n_classes=10)
 
-### SET TASK
-task = "carillo"
-div, e, other_dim = get_attr()
-div = str(div).replace(".", "")
-e = str(e).replace(".", "")
+# And transform it into a pair of pure functions:
+net = hk.transform(lenet5)
 
-save_name = f"{task}_s{div}_plus{e}_od{other_dim}"
+# Make the network and loss function pure.
+def loss_fn(params, images, labels):
+    logits = net.apply(params, None, images)
+    labels = jax.nn.one_hot(labels, 10)
+    return jnp.mean(optax.softmax_cross_entropy(logits, labels))
 
-funnel_config = set_task(funnel_config, task)
-funnel_config.model.reference_process_key = "oudstl"
 
-# funnel_config.model.reference_process_key = "pisstl"
-# funnel_config.model.step_scheme_key = "uniform"
+def accuracy(params, images, labels):
+    # Compute the logits given the images.
+    logits = net.apply(params, None, images)
 
-# exp_dec
-# cos_sq
-# uniform
-# last_small
-# linear_dds
-# linear
-# uniform_dds
+    # Compute the predicted classes.
+    predicted_class = jnp.argmax(logits, axis=-1)
 
-if funnel_config.model.reference_process_key == "oudstl":
-    funnel_config.model.step_scheme_key = "cos_sq"
+    # Check which predictions match the ground truth labels.
+    correct_predictions = jnp.sum(jnp.equal(predicted_class, labels))
 
-    # Opt setting for funnel
-    funnel_config.model.sigma = 1.075
-    funnel_config.model.alpha = 0.6875
-    funnel_config.model.m = 1.0
+    # Compute the accuracy as the number of correct predictions divided by the total number of predictions.
+    acc = correct_predictions / labels.size
 
-    # Path opt settings
-    funnel_config.model.exp_dds = False
+    return acc
 
-# funnel_config.model.stl = False
-# funnel_config.model.detach_stl_drift = False
 
-funnel_config.model.stl = True
-funnel_config.model.detach_stl_drift = True
+# Make the loss function pure.
+#loss_fn = hk.transform(loss_fn)
 
-funnel_config.trainer.notebook = True
-funnel_config.trainer.epochs = 11000
-# Opt settings we use
-# funnel_config.trainer.learning_rate = 0.0001
-funnel_config.trainer.learning_rate = 5 * 10 ** (-3)
-funnel_config.trainer.lr_sch_base_dec = 0.95  # For funnel
-# %%
-funnel_config.model.reference_process_key
-# %%
-input_dim = funnel_config.model.input_dim
-# %%
-funnel_config.model.step_scheme_key
-# %%
-funnel_config.model.ts.shape
-# %%
-funnel_config.trainer.epochs = 50
-out_dict = train_dds(funnel_config)
+# Prepare an optimizer.
+opt = optax.adam(0.001)
+
+@jax.jit
+def update(params, opt_state, images, labels):
+    grads = jax.grad(loss_fn)(params, images, labels)
+    updates, opt_state = opt.update(grads, opt_state)
+    new_params = optax.apply_updates(params, updates)
+    return new_params, opt_state
+
+# Initialize parameters
+params = net.init(jax.random.PRNGKey(42), jnp.ones([1, 28, 28, 1]))
+opt_state = opt.init(params)
+
+
+total = 0
+for param in params:
+    print(f"Weight shape: {params[param]['w'].shape}")
+    print(f"Bias shape: {params[param]['b'].shape}")
+
+    w = 1
+    for i in (list(params[param]["w"].shape)):
+        w *= i
+    b = 1
+    for j in list(params[param]["b"].shape):
+        b *= j
+    total += w
+    total += b
+
+print(f"Total: {total}")# print("Total parameters: ", count_parameters(params))
+
+for epoch in range(10):
+    for batch in train_dataset:
+        images, labels = batch
+        images = jnp.array(images)
+        labels = jnp.array(labels)
+        params, opt_state = update(params, opt_state, images, labels)
+        print(accuracy(params, images, labels))
+
+for b in test_dataset:
+    test_images, test_labels = b
+    print(accuracy(params, test_images, test_labels))
+

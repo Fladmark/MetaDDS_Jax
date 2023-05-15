@@ -59,7 +59,7 @@ class mlpw_target_class:
     self.div = div
     self.c = c
 
-  def f(self, v):
+  def f(self, v, type=""):
     return -(-jnp.sin(3 * v) - v ** 2 + 0.7 * v)
 
   def mlpw(self, x):
@@ -180,13 +180,7 @@ class levy_target_class2:
     self.c = c
 
   def f(self,x, type="opt"):
-    w = 1 + (x - 1) / 4
-
-    term1 = (jnp.sin(jnp.pi * w[0])) ** 2
-    term3 = (jnp.sin(2 * jnp.pi * w[-1])) ** 2
-    term2 = jnp.sum((w[:-1] - 1) ** 2 * (1 + 10 * (jnp.sin(jnp.pi * w[1:])) ** 2))
     return np.sum(100 * (x[1:] - x[:-1] ** 2) ** 2 + (1 - x[:-1]) ** 2)
-    return term1 + term2 + term3
 
   def levy(self, x):
 
@@ -199,7 +193,34 @@ class levy_target_class2:
 
     return jax.vmap(unbatched)(x)
 
+class anneal_target_class:
 
+  def __init__(self, div, c):
+    self.e = 0
+    self.div = div
+    self.c = c
+
+  def f(self,x, type="opt"):
+      # Local minima created by sine function
+      local_minima = jnp.sin(x * 6)
+
+      # Global sharp minimum created by Gaussian function
+      a = 0.1
+      b = 0.5  # the position of the global minimum
+      c = 0.3  # this controls the "sharpness" of the minimum
+      global_minimum = -a * jnp.exp(-0.5 * ((x - b) / c) ** 2)
+      return local_minima + global_minimum
+
+  def anneal(self, x):
+
+    def unbatched(x):
+      #div, e, other_dim = get_attr()
+      V_x = self.f(x)
+      V_x = jnp.exp(-V_x / self.div) + self.e
+
+      return V_x * self.c
+
+    return jax.vmap(unbatched)(x)
 
 
 # less steep that the original layeb01
@@ -331,6 +352,34 @@ class moons_target_class:
     return self.moon_task.get_pred(v)
 
   def moon(self, x):
+    def unbatched(x):
+      #div, e, other_dim = get_attr()
+      v = x
+      V_x = self.f(v)
+      V_x = jnp.exp(-V_x / self.div) + self.e
+      return V_x * self.c
+
+    return jax.vmap(unbatched)(x)
+
+
+
+from experimental.forest_t import forest_task
+
+class forest_target_class:
+
+  def __init__(self, div, c):
+    self.forest_task = forest_task()
+    self.e = 0
+    self.div = div
+    self.c = c
+
+  def f(self, v, type="training"):
+    return self.forest_task.get_loss(v, type)
+
+  def accuracy(self, v, type="training"):
+    return self.forest_task.get_accuracy(v, type)
+
+  def forest(self, x):
     def unbatched(x):
       #div, e, other_dim = get_attr()
       v = x

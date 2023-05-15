@@ -37,7 +37,7 @@ def binary_cross_entropy_loss(y_true, y_pred):
 
 class moon_task:
 
-    def __init__(self):
+    def __init__(self, state=42):
         # Transforms
         self.task_model = hk.without_apply_rng(hk.transform(task_model))
         self.X, self.y = generate_moons_data()
@@ -50,7 +50,7 @@ class moon_task:
         # Initialize parameters
         DATASIZE = 2
         GTSIZE = 1
-        key = random.PRNGKey(42)
+        key = random.PRNGKey(state)
         x_sample = jnp.zeros((1, DATASIZE))
         self.params = self.task_model.init(key, x_sample)
 
@@ -71,14 +71,16 @@ class moon_task:
             y_pred = self.task_model.apply(self.params, self.X_train)
             loss = jnp.mean(binary_cross_entropy_loss(self.y_train, y_pred))
         else:
-            indecies = np.array(range(self.idx, self.idx + self.batch_size)) % (self.X_train.shape[0] - 1)
-            self.idx += self.batch_size
-            if self.idx > self.X.shape[0] - 1:
-                self.idx = self.idx % (self.X_train.shape[0] - 1)
-            x_batch = self.X_train[indecies]
-            y_batch = self.y_train[indecies]
-            y_pred = self.task_model.apply(self.params, x_batch)
-            loss = jnp.mean(binary_cross_entropy_loss(y_batch, y_pred))
+            y_pred = self.task_model.apply(self.params, self.X_train)
+            loss = jnp.mean(binary_cross_entropy_loss(self.y_train, y_pred))
+            # indecies = np.array(range(self.idx, self.idx + self.batch_size)) % (self.X_train.shape[0] - 1)
+            # self.idx += self.batch_size
+            # if self.idx > self.X.shape[0] - 1:
+            #     self.idx = self.idx % (self.X_train.shape[0] - 1)
+            # x_batch = self.X_train[indecies]
+            # y_batch = self.y_train[indecies]
+            # y_pred = self.task_model.apply(self.params, x_batch)
+            # loss = jnp.mean(binary_cross_entropy_loss(y_batch, y_pred))
         return loss
 
     def get_pred(self, parameters):
@@ -107,16 +109,56 @@ class moon_task:
             y_pred = self.task_model.apply(self.params, self.X_train) > 0.5
             return jnp.mean(y_pred == self.y_train)
 
+    def get_accuracy_other(self,type="training"):
+        if type == "validation":
+            y_pred = self.task_model.apply(self.params, self.X_val) > 0.5
+            return jnp.mean(y_pred == self.y_val)
+        elif type == "test":
+            y_pred = self.task_model.apply(self.params, self.X_test) > 0.5
+            return jnp.mean(y_pred == self.y_test)
+        else:
+            y_pred = self.task_model.apply(self.params, self.X_train) > 0.5
+            return jnp.mean(y_pred == self.y_train)
 
-# task = moon_task()
+    def train(self, opt):
+        optimizer = optax.adam(1e-3)
+        optimizer = opt #optax.noisy_sgd(lr, 0.001, 0.75)
+        opt_state = optimizer.init(self.params)
+        @jax.jit
+        def update(params, opt_state, x, y):
+            y_pred = self.task_model.apply(params, x)
+            loss = jnp.mean(binary_cross_entropy_loss(y, y_pred))
+            grads = jax.grad(lambda p, x, y: jnp.mean(binary_cross_entropy_loss(y, self.task_model.apply(p, x))))(params, x,y)
+            updates, opt_state = optimizer.update(grads, opt_state, params=params)
+            params = optax.apply_updates(params, updates)
+            return params, opt_state, loss
+
+        # Training loop
+        num_epochs = 10000
+        batch_size = 64
+        num_batches = len(self.X_train) // batch_size
+
+        vals = []
+        for epoch in range(num_epochs):
+            for i in range(num_batches):
+                start = i * batch_size
+                end = start + batch_size
+                x_batch, y_batch = self.X_train[start:end], self.y_train[start:end]
+                self.params, opt_state, loss = update(self.params, opt_state, x_batch, y_batch)
+
+            # print(f'Epoch {epoch + 1}/{num_epochs} Validation Accuracy: {self.get_accuracy_other( "validation"):.6f}')
+            # print(f'Epoch {epoch + 1}/{num_epochs} Loss: {loss:.6f}')
+            vals.append(self.get_accuracy_other("validation"))
+        return (self.get_accuracy_other("test")), vals
+
+
+# lrs = [0.01, 0.005, 0.0025 ,0.001, 0.0005, 0.00025]
 #
-# print(task.params)
+# vals = [0] * 6
+# #for key in [42,43,44]:
+# for idx, lr in enumerate(lrs):
+#     task = moon_task()
+#     best_val = task.train(lr=lr)
+#     vals[idx] += best_val
 #
-# b = 1
-# for i in range(10000):
-#     k = task.get_loss(np.random.rand(30)*5)
-#     print(k)
-#     if k < b:
-#         print(k)
-#         b = k
-# print(b)
+# print(vals)
