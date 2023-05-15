@@ -389,6 +389,30 @@ class forest_target_class:
 
     return jax.vmap(unbatched)(x)
 
+class mnist_target_class:
+
+  def __init__(self, div, c):
+    self.forest_task = forest_task()
+    self.e = 0
+    self.div = div
+    self.c = c
+
+  def f(self, v, type="training"):
+    return self.forest_task.get_loss(v, type)
+
+  def accuracy(self, v, type="training"):
+    return self.forest_task.get_accuracy(v, type)
+
+  def mnist(self, x):
+    def unbatched(x):
+      #div, e, other_dim = get_attr()
+      v = x
+      V_x = self.f(v)
+      V_x = jnp.exp(-V_x / self.div) + self.e
+      return V_x * self.c
+
+    return jax.vmap(unbatched)(x)
+
 def simple_gaussian(d=2, sigma=1):
   """Wrapper method for simple Gaussian test distribution.
 
