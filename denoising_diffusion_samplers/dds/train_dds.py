@@ -451,9 +451,21 @@ def train_dds(
                                                       model_state, opt_state,
                                                       subkeys, batch_size_)
 
+    # if epoch % 1 == 0:
+    #     eval_report(trainable_params, non_trainable_params,
+    #                 model_state, subkeys, batch_size_elbo, epoch,
+    #                 training_writer, loss_list, print_flag=False, write=False)
+    #
+    #     update_detached_params(trainable_params, non_trainable_params,
+    #                            "simple_drift_net", "stl_detach")
+    #     params = hk.data_structures.merge(trainable_params, non_trainable_params)
+    #     (augmented_trajectory, _), _ = forward_fn_wrap(params, model_state, jax.random.PRNGKey(1), 1000)
+    #     b, w = get_smallest_loss(augmented_trajectory, config, type="non-batch")
+    #     print(f"Best training loss: {b}")
+    #     accumulated_training_loss.append(b)
 
     # #Training loss
-    if epoch % 2 == 0:
+    if epoch % 10000 == 9000: # 2
 
         eval_report(trainable_params, non_trainable_params,
                     model_state, subkeys, batch_size_elbo, epoch,
@@ -478,47 +490,54 @@ def train_dds(
 
 
         best_training_acc, w_best_t_acc = get_highest_accuracy(augmented_trajectory, config, type="training")
-        best_averaged_training_acc, w_best_t_acc_avg = get_highest_averaged_accuracy(augmented_trajectory, config, type="training")
+        #best_averaged_training_acc, w_best_t_acc_avg = get_highest_averaged_accuracy(augmented_trajectory, config, type="training")
 
         best_val_acc, w_best_v_acc = get_highest_accuracy(augmented_trajectory, config, type="validation")
-        best_averaged_val_acc, w_best_v_acc_avg = get_highest_averaged_accuracy(augmented_trajectory, config, type="validation")
+        #best_averaged_val_acc, w_best_v_acc_avg = get_highest_averaged_accuracy(augmented_trajectory, config, type="validation")
 
 
         accumulated_training_acc.append(best_training_acc)
         accumulated_validation_acc.append(best_val_acc)
 
-        accumulated_training_acc_avg.append(best_averaged_training_acc)
-        accumulated_validation_acc_avg.append(best_averaged_val_acc)
+        #accumulated_training_acc_avg.append(best_averaged_training_acc)
+        #accumulated_validation_acc_avg.append(best_averaged_val_acc)
 
 
         print(f"Best training accuracy: {best_training_acc}")
         print(f"Best validation accuracy: {best_val_acc}")
-        print(f"Best training accuracy (AVG): {best_averaged_training_acc}")
-        print(f"Best validation accuracy (AVG): {best_averaged_val_acc}")
+        #print(f"Best training accuracy (AVG): {best_averaged_training_acc}")
+        #print(f"Best validation accuracy (AVG): {best_averaged_val_acc}")
 
         if best_training_acc >= max(accumulated_training_acc):
             best_training_weights = w_best_t_acc
 
-        if best_averaged_training_acc >= max(accumulated_training_acc_avg):
-            best_training_weights_avg = w_best_t_acc_avg
+        # if best_averaged_training_acc >= max(accumulated_training_acc_avg):
+        #     best_training_weights_avg = w_best_t_acc_avg
 
         if best_val_acc >= max(accumulated_validation_acc):
             best_weights = w_best_v_acc
 
-        if best_averaged_val_acc >= max(accumulated_validation_acc_avg):
-            best_weights_avg = w_best_v_acc_avg
+        # if best_averaged_val_acc >= max(accumulated_validation_acc_avg):
+        #     best_weights_avg = w_best_v_acc_avg
 
-        accuracy = config.model.target_class.accuracy(best_weights, "test")
-        accuracy_avg = config.model.target_class.accuracy(best_weights_avg, "test")
+        # # historically best
+        # accuracy = config.model.target_class.accuracy(best_weights, "test")
+        # accuracy_avg = config.model.target_class.accuracy(best_weights_avg, "test")
+        # accuracy_train = config.model.target_class.accuracy(best_training_weights, "test")
+        # accuracy_train_avg = config.model.target_class.accuracy(best_training_weights_avg, "test")
 
-        accuracy_train = config.model.target_class.accuracy(best_training_weights, "test")
-        accuracy_train_avg = config.model.target_class.accuracy(best_training_weights_avg, "test")
+        # curr best
+        accuracy = config.model.target_class.accuracy(w_best_v_acc, "test")
+        #accuracy_avg = config.model.target_class.accuracy(w_best_v_acc_avg, "test")
+        accuracy_train = config.model.target_class.accuracy(w_best_t_acc, "test")
+        #accuracy_train_avg = config.model.target_class.accuracy(w_best_t_acc_avg, "test")
+
         print("WITH VAL")
         print(f"Test Accuracy: {accuracy}")
-        print(f"Test Accuracy (AVG): {accuracy_avg}")
+        #print(f"Test Accuracy (AVG): {accuracy_avg}")
         print("WITH TRAIN")
         print(f"Test Accuracy: {accuracy_train}")
-        print(f"Test Accuracy (AVG): {accuracy_train_avg}")
+        #print(f"Test Accuracy (AVG): {accuracy_train_avg}")
 
 
 
@@ -557,21 +576,21 @@ def train_dds(
   # print(f"TEST ACCURACY: {config.model.target_class.breast_task.get_test_accuracy(best_weights)}")
   # config.model.target_class.breast_task.fine_tune(best_weights)
 
-  accuracy = 0
-  accuracy_avg = 0
-  test_loss = 0
-  accuracy = config.model.target_class.accuracy(best_weights, "test")
-  accuracy_avg = config.model.target_class.accuracy(best_weights_avg, "test")
-
-  accuracy_train = config.model.target_class.accuracy(best_training_weights, "test")
-  accuracy_train_avg = config.model.target_class.accuracy(best_training_weights_avg, "test")
-
-  print("WITH VAL")
-  print(f"Test Accuracy: {accuracy}")
-  print(f"Test Accuracy (AVG): {accuracy_avg}")
-  print("WITH TRAIN")
-  print(f"Test Accuracy: {accuracy_train}")
-  print(f"Test Accuracy (AVG): {accuracy_train_avg}")
+  # accuracy = 0
+  # accuracy_avg = 0
+  # test_loss = 0
+  # accuracy = config.model.target_class.accuracy(best_weights, "test")
+  # accuracy_avg = config.model.target_class.accuracy(best_weights_avg, "test")
+  #
+  # accuracy_train = config.model.target_class.accuracy(best_training_weights, "test")
+  # accuracy_train_avg = config.model.target_class.accuracy(best_training_weights_avg, "test")
+  #
+  # print("WITH VAL")
+  # print(f"Test Accuracy: {accuracy}")
+  # print(f"Test Accuracy (AVG): {accuracy_avg}")
+  # print("WITH TRAIN")
+  # print(f"Test Accuracy: {accuracy_train}")
+  # print(f"Test Accuracy (AVG): {accuracy_train_avg}")
 
   import numpy as np
   import matplotlib.pyplot as plt

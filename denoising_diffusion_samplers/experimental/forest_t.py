@@ -9,7 +9,7 @@ from sklearn.preprocessing import StandardScaler
 
 
 
-
+from sklearn.utils import shuffle
 import optax
 import jax
 from jax import random, grad, jit, value_and_grad
@@ -18,8 +18,21 @@ import haiku as hk
 from sklearn.datasets import fetch_covtype
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+import random as rd
 
 import numpy as np
+
+class DataIter:
+    def __init__(self, data, labels, batch_size=25):
+        self.data = data
+        self.labels = labels
+        self.batch_size = batch_size
+        self.num_samples = len(data)
+
+    def __iter__(self):
+        for i in range(0, self.num_samples, self.batch_size):
+            yield (self.data[i:i + self.batch_size], self.labels[i:i + self.batch_size])
+
 # Define the model
 def task_model(x):
     net = hk.Sequential([
@@ -44,6 +57,7 @@ def generate_data():
     X_train, X_test, y_train, y_test = train_test_split(data[:800,:], target[:800], test_size=0.5, random_state=42)
     X_val, X_test, y_val, y_test = train_test_split(X_test, y_test, test_size=0.75, random_state=42)
 
+    X_train, y_train = shuffle(X_train, y_train)
 
     # Convert to jax arrays
     X_train = jnp.array(X_train)
@@ -57,6 +71,7 @@ class forest_task:
     def __init__(self, opt=None, state=42, lr=0.001):
         # Transforms
         self.X_train, self.y_train, self.X_test, self.y_test, self.X_val, self.y_val = generate_data()
+        self.iter = iter(DataIter(self.X_train, self.y_train))
         # Transform the model function into a pair of pure functions
         self.task_model = hk.without_apply_rng(hk.transform(task_model))
         # Create optimizer
@@ -71,7 +86,7 @@ class forest_task:
         self.params = self.task_model.init(jax.random.PRNGKey(state), self.X_train[0])
         self.opt_state = self.optimizer.init(self.params)
 
-        self.batch_size = 24
+        self.batch_size = 25
         self.idx = 0
 
     def get_accuracy(self, parameters, type="training", without_slice=False):
@@ -115,21 +130,25 @@ class forest_task:
             return optax.softmax_cross_entropy(logits, jax.nn.one_hot(self.y_val, 7)).mean()
         else:
 
-            indecies = np.array(range(self.idx, self.idx + self.batch_size)) % (self.X_train.shape[0] - 1)
-            self.idx += self.batch_size
-            if self.idx > self.X_train.shape[0] - 1:
-                self.idx = self.idx % (self.X_train.shape[0] - 1)
-            #print(indecies)
-            x_batch = self.X_train[indecies]
-            y_batch = self.y_train[indecies]
-            logits = self.task_model.apply(self.params, x_batch)
-            return optax.softmax_cross_entropy(logits, jax.nn.one_hot(y_batch, 7)).mean()
+            ## batches
+            # try:
+            #     x, y = next(self.iter)
+            # except:
+            #     self.iter = iter(DataIter(self.X_train, self.y_train))
+            #     x, y = next(self.iter)
+            #
+            # logits = self.task_model.apply(self.params, x)
+            # return optax.softmax_cross_entropy(logits, jax.nn.one_hot(y, 7)).mean()
 
-            logits = self.task_model.apply(self.params, self.X_train)
-            return optax.softmax_cross_entropy(logits, jax.nn.one_hot(self.y_train, 7)).mean()
+            @jit
+            def get_train():
+                logits = self.task_model.apply(self.params, self.X_train)
+                return optax.softmax_cross_entropy(logits, jax.nn.one_hot(self.y_train, 7)).mean()
+
+            return get_train()
 
     def train(self, epochs):
-        @jax.jit
+        #@jax.jit
         def train_step(params, opt_state, x, y):
             # Compute gradients
             def loss_fn(params):
@@ -141,8 +160,10 @@ class forest_task:
             grads = grad_fn(params)
 
             # Update parameters
-            updates, new_opt_state = self.optimizer.update(grads,opt_state,params=params)#self.optimizer.update(grads, opt_state)
-            new_params = optax.apply_updates(params, updates)
+            # updates, new_opt_state = self.optimizer.update(grads,opt_state,params=params)#self.optimizer.update(grads, opt_state)
+            # new_params = optax.apply_updates(params, updates)
+            new_opt_state = None
+            new_params = self.optimizer.update(grads, params)
 
             # grads = jax.grad(loss_fn)(params)
             #
@@ -164,7 +185,7 @@ class forest_task:
         best_val = 0
         for epoch in range(epochs):
             self.params, opt_state = train_step(self.params, self.opt_state, self.X_train, self.y_train)
-
+            print(self.params["linear"]["w"][:10])
             va = self.get_accuracy(self.params, "validation", True)
             vals.append(va)
             ta = self.get_accuracy(self.params, "train", True)

@@ -83,7 +83,7 @@ def relative_kl_objective(augmented_trajectory, g,
 
   #hcb.id_print((x_final_time))
   #hcb.id_print((energy_cost_dt + terminal_cost + stl).mean())
-  loss = (energy_cost_dt + terminal_cost + stl).mean()
+  loss = (energy_cost_dt * 100000 + terminal_cost + stl).mean()
   return loss
 
 

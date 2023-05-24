@@ -82,7 +82,7 @@ class carillo_target_class:
     self.div = div
     self.c = c
 
-  def f(self, v):
+  def f(self, v, type="opt"):
     return v**2 - 10*jnp.cos(2*jnp.pi*v) + 10
 
   def carillo(self, x):
@@ -133,7 +133,7 @@ class booth_target_class:
     self.div = div
     self.c = c
 
-  def f(self, x):
+  def f(self, x, type="opt"):
     v, w = x[0], x[1]
     return(v + 2*w - 7)**2 + (2*v + w - 5)**2
 
@@ -155,7 +155,13 @@ class levy_target_class:
     self.div = div
     self.c = c
 
-  def f(self,x):
+  def f(self,x, type="opt"):
+    w1 = 1 + (x[0] - 1) / 4
+    w2 = 1 + (x[1] - 1) / 4
+    term1 = jnp.sin(jnp.pi * w1) ** 2
+    term2 = (w2 - 1) ** 2 * (1 + 10 * (jnp.sin(jnp.pi * w2 + 1) ** 2))
+    term3 = (w2 - 1) ** 2 * (1 + jnp.sin(2 * jnp.pi * w2) ** 2)
+    return term1 + term2 + term3
     v, w = x[0], x[1]
     return jnp.sin(3*jnp.pi*v) + (v - 1)**2 * (1+jnp.sin(3*jnp.pi*w)**2) + (w-1)**2 * (1 + jnp.sin(2*jnp.pi*w)**2)
 
@@ -267,7 +273,7 @@ class layeb10_target_class:
     self.div = div
     self.c = c
 
-  def f(self, v):
+  def f(self, v, type="nah"):
     return jnp.log(v**2 + 16 + 0.5)**2 + jnp.abs(jnp.sin(v - 4)) - 9
 
   def layeb10(self, x):
@@ -362,7 +368,6 @@ class moons_target_class:
     return jax.vmap(unbatched)(x)
 
 
-
 from experimental.forest_t import forest_task
 
 class forest_target_class:
@@ -389,19 +394,20 @@ class forest_target_class:
 
     return jax.vmap(unbatched)(x)
 
+from experimental.mnist_t import mnist_task
 class mnist_target_class:
 
   def __init__(self, div, c):
-    self.forest_task = forest_task()
+    self.mnist_task = mnist_task()
     self.e = 0
     self.div = div
     self.c = c
 
   def f(self, v, type="training"):
-    return self.forest_task.get_loss(v, type)
+    return self.mnist_task.get_loss(v, type)
 
   def accuracy(self, v, type="training"):
-    return self.forest_task.get_accuracy(v, type)
+    return self.mnist_task.get_accuracy(v, type)
 
   def mnist(self, x):
     def unbatched(x):

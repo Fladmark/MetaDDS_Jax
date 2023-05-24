@@ -68,7 +68,7 @@ def get_config():
   config.model.learn_betas = False
   config.trainer.timer = False
 
-  config.model.batch_size = 300  # 128
+  config.model.batch_size = 32 #300  # 128
   config.model.elbo_batch_size = 2000
   config.model.terminal_cost = ou_terminal_loss
   config.model.tfinal = 5.0
@@ -232,7 +232,7 @@ def set_task(config, task="lr_sonar", div=1, c=1):
 
   elif task == "forest":
     config.model.input_dim = 1247
-    config.model.elbo_batch_size = 2000
+    config.model.elbo_batch_size = 64#2000
     config.model.val = True
     config.model.target_class = toy_targets.forest_target_class(div, c)
     target = config.model.target_class.forest

@@ -1,3 +1,5 @@
+import math
+
 import chex
 import jax
 import jax.numpy as jnp
@@ -131,14 +133,17 @@ class moon_task:
             grads = jax.grad(lambda p, x, y: jnp.mean(binary_cross_entropy_loss(y, self.task_model.apply(p, x))))(params, x,y)
             updates, opt_state = optimizer.update(grads, opt_state, params=params)
             params = optax.apply_updates(params, updates)
+            #params = opt.update(grads, params)
             return params, opt_state, loss
 
         # Training loop
-        num_epochs = 10000
+        num_epochs = 40000
         batch_size = 64
         num_batches = len(self.X_train) // batch_size
 
         vals = []
+        best_params = None
+        best_acc = - math.inf
         for epoch in range(num_epochs):
             for i in range(num_batches):
                 start = i * batch_size
@@ -148,7 +153,13 @@ class moon_task:
 
             # print(f'Epoch {epoch + 1}/{num_epochs} Validation Accuracy: {self.get_accuracy_other( "validation"):.6f}')
             # print(f'Epoch {epoch + 1}/{num_epochs} Loss: {loss:.6f}')
-            vals.append(self.get_accuracy_other("validation"))
+            val_acc = self.get_accuracy_other("validation")
+            vals.append(val_acc)
+            if val_acc > best_acc:
+                best_acc = val_acc
+                best_params = self.params
+
+        self.params = best_params
         return (self.get_accuracy_other("test")), vals
 
 

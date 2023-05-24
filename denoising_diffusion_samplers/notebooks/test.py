@@ -15,25 +15,25 @@ def load_dataset(split, batch_size):
     ds = as_numpy(ds)
     return ds
 
-train_dataset = load_dataset("train", batch_size=600)
-test_dataset = load_dataset("test", batch_size=1000)
+train_dataset = load_dataset("train", batch_size=300)
+test_dataset = load_dataset("test", batch_size=500)
 
 
 
 # Define the LeNet model
 def LeNet5(n_classes):
     def model(x):
-        x = hk.Conv2D(output_channels=6, kernel_shape=5, stride=1)(x)
+        x = hk.Conv2D(output_channels=4, kernel_shape=5, stride=1)(x)
         x = jnp.tanh(x)
         x = hk.AvgPool(window_shape=2, strides=2,padding="VALID")(x)
-        x = hk.Conv2D(output_channels=5, kernel_shape=5, stride=1)(x)
+        x = hk.Conv2D(output_channels=3, kernel_shape=5, stride=1)(x)
         x = jnp.tanh(x)
         x = hk.AvgPool(window_shape=3, strides=3,padding="VALID")(x)
         #x = x.reshape((x.shape[0], -1))
         x = hk.Flatten()(x)
-        x = hk.Linear(120)(x)
+        x = hk.Linear(40)(x)
         x = jnp.tanh(x)
-        x = hk.Linear(84)(x)
+        x = hk.Linear(20)(x)
         x = jnp.tanh(x)
         x = hk.Linear(n_classes)(x)
         return x
@@ -83,7 +83,6 @@ def update(params, opt_state, images, labels):
 
 # Initialize parameters
 params = net.init(jax.random.PRNGKey(42), jnp.ones([1, 28, 28, 1]))
-print(params)
 opt_state = opt.init(params)
 
 
@@ -99,20 +98,36 @@ for param in params:
     for j in list(params[param]["b"].shape):
         b *= j
     total += w
+    print(total)
     total += b
+    print(total)
 
 print(f"Total: {total}")# print("Total parameters: ", count_parameters(params))
 
-# for epoch in range(1000):
-#     for batch in train_dataset:
-#         images, labels = batch
-#         images = jnp.array(images)
-#         labels = jnp.array(labels)
-#         params, opt_state = update(params, opt_state, images, labels)
-#         print(accuracy(params, images, labels))
-#         break
-#
-# for b in test_dataset:
-#     test_images, test_labels = b
-#     print(accuracy(params, test_images, test_labels))
+for j in test_dataset:
+    X_test, y_test = j
+    break
 
+X_val, X_test, y_val, y_test = train_test_split(X_test, y_test, test_size=0.5,
+                                                                    random_state=42)
+
+for epoch in range(3000):
+    for batch in train_dataset:
+        images, labels = batch
+        images = jnp.array(images)
+        labels = jnp.array(labels)
+        params, opt_state = update(params, opt_state, images, labels)
+        print(accuracy(params, X_val, y_val))
+        break
+
+
+print("Test")
+print(accuracy(params, X_test, y_test))
+
+# iterator = iter(train_dataset)
+# while True:
+#     try:
+#         self.X_train, self.y_train = (next(iterator))
+#     except:
+#         iterator = iter(train_dataset)
+#         self.X_train, self.y_train = (next(iterator))

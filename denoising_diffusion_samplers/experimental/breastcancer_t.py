@@ -192,9 +192,9 @@ class breast_task:
         key = random.PRNGKey(state)
         x_sample = jnp.zeros((1, DATASIZE))
         self.params = self.task_model.init(key, x_sample)
-        for p in self.params:
-            print(self.params[p]["w"].shape)
-            print(self.params[p]["b"].shape)
+        # for p in self.params:
+        #     print(self.params[p]["w"].shape)
+        #     print(self.params[p]["b"].shape)
 
     def get_loss(self, parameters, type="training"):
         l, b, l1, b1 = parameters[:150].reshape(15, 10), parameters[150:160].reshape(10), parameters[160:170].reshape(10, 1), parameters[170:].reshape(1)
@@ -265,6 +265,7 @@ class breast_task:
             grads = jax.grad(self.get_training_loss)(params, "training")
             updates, opt_state = optimizer.update(grads, opt_state,params=params)
             params = optax.apply_updates(params, updates)
+            #params = opt.update(grads, params)
             return params, opt_state
 
         # Training loop
